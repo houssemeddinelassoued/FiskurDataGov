@@ -4,5 +4,6 @@
     <string name="app_name">Fiskur Data.Gov</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="title_activity_package_result">Resource Info</string>
 
 </resources>

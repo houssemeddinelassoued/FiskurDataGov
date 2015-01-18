@@ -1,4 +1,4 @@
-package eu.fiskur.fiskurdatagov;
+package eu.fiskur.fiskurdatagov.responses;
 
 import java.util.ArrayList;
 

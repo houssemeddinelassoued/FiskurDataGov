@@ -1,9 +1,11 @@
 package eu.fiskur.fiskurdatagov.objects;
 
+import java.io.Serializable;
+
 /**
  * Created by Jonathan Fisher on 18/01/15.
  */
-public class Organization {
+public class Organization implements Serializable {
     String description;
     String created;
     String title;
@@ -16,4 +18,8 @@ public class Organization {
     String type;
     String id;
     String approval_status;
+
+    public String getTitle(){
+        return title;
+    }
 }

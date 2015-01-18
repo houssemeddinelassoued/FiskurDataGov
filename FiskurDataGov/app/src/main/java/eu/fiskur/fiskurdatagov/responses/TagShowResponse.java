@@ -1,4 +1,4 @@
-package eu.fiskur.fiskurdatagov;
+package eu.fiskur.fiskurdatagov.responses;
 
 import eu.fiskur.fiskurdatagov.objects.Result;
 

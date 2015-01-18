@@ -1,6 +1,6 @@
 package eu.fiskur.fiskurdatagov.events;
 
-import eu.fiskur.fiskurdatagov.TagListResponse;
+import eu.fiskur.fiskurdatagov.responses.TagListResponse;
 
 /**
  * Created by primer on 17/01/15.

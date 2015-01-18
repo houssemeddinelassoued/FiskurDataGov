@@ -1,13 +1,17 @@
 package eu.fiskur.fiskurdatagov;
 
+import android.content.Context;
+import android.content.Intent;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -20,6 +24,8 @@ import butterknife.ButterKnife;
 import butterknife.InjectView;
 import eu.fiskur.fiskurdatagov.events.ErrorEvent;
 import eu.fiskur.fiskurdatagov.events.LoadTagsEvent;
+import eu.fiskur.fiskurdatagov.events.PackageSearchEvent;
+import eu.fiskur.fiskurdatagov.events.PackageSearchResultsEvent;
 import eu.fiskur.fiskurdatagov.events.ShowTagEvent;
 import eu.fiskur.fiskurdatagov.events.TagPackagesLoadedEvent;
 import eu.fiskur.fiskurdatagov.events.TagsLoadedEvent;
@@ -31,12 +37,15 @@ import timber.log.Timber;
 public class MainActivity extends ActionBarActivity {
 
     Bus bus = BusProvider.getInstance();
-    ArrayAdapter<String> tagsAdapter;
+    ArrayAdapter<String> tagsAdapter = null;
     ArrayAdapter<Package> packagesAdapter;
+    ArrayAdapter<PackageSearchResultObject> packagesSearchAdapter;
     @InjectView(R.id.search_label_text_view) TextView searchLabelTextView;
     @InjectView(R.id.autocomplete_text_view) AutoCompleteTextView autoCompleteTextView;
+    @InjectView(R.id.search_button) Button searchButton;
     @InjectView(R.id.progress_bar) ProgressBar progressBar;
     @InjectView(R.id.packages_list_view) ListView packagesListView;
+    InputMethodManager imm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,15 +53,40 @@ public class MainActivity extends ActionBarActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.inject(this);
 
+        imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+
         autoCompleteTextView.setActivated(false);
         autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 String tag = tagsAdapter.getItem(position);
-                progressBar.setVisibility(View.VISIBLE);
-                bus.post(new ShowTagEvent(tag));
+                doSearch(tag);
             }
         });
+
+        searchButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String query = autoCompleteTextView.getText().toString();
+                doSearch(query);
+            }
+        });
+
+        packagesListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                PackageSearchResultObject resultObj = packagesSearchAdapter.getItem(position);
+                Intent intent = new Intent(MainActivity.this, PackageResultActivity.class);
+                intent.putExtra("searchresultobj", resultObj);
+                startActivity(intent);
+            }
+        });
+    }
+
+    private void doSearch(String query){
+        progressBar.setVisibility(View.VISIBLE);
+        imm.hideSoftInputFromWindow(autoCompleteTextView.getWindowToken(), 0);
+        bus.post(new PackageSearchEvent(query));
     }
 
     @Override
@@ -60,7 +94,10 @@ public class MainActivity extends ActionBarActivity {
         super.onResume();
 
         bus.register(this);
-        bus.post(new LoadTagsEvent());
+
+        if(tagsAdapter == null){
+            bus.post(new LoadTagsEvent());
+        }
     }
 
     @Override
@@ -72,7 +109,7 @@ public class MainActivity extends ActionBarActivity {
 
     @Subscribe
     public void onTagsLoaded(TagsLoadedEvent tagsLoadedEvent){
-        searchLabelTextView.setText("Search tag (" + tagsLoadedEvent.getResponse().getResult().size() + " entries)");
+        searchLabelTextView.setText("Search by tag (" + tagsLoadedEvent.getResponse().getResult().size() + " tags) or keyword");
         tagsAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, tagsLoadedEvent.getResponse().getResult());
         autoCompleteTextView.setAdapter(tagsAdapter);
         autoCompleteTextView.setActivated(true);
@@ -87,6 +124,17 @@ public class MainActivity extends ActionBarActivity {
         packagesAdapter = new ArrayAdapter<Package>(MainActivity.this, android.R.layout.simple_list_item_1, android.R.id.text1, tagPackagesLoadedEvent.getResponse().getResult().getPackages());
         packagesListView.setAdapter(packagesAdapter);
         packagesListView.setVisibility(View.VISIBLE);
+    }
+
+    @Subscribe
+    public void onPackageSearchResults(PackageSearchResultsEvent packageSearchResultsEvent){
+        Timber.d("Package Search returned...");
+        progressBar.setVisibility(View.GONE);
+
+        packagesSearchAdapter = new ArrayAdapter<PackageSearchResultObject>(MainActivity.this, android.R.layout.simple_list_item_1, android.R.id.text1, packageSearchResultsEvent.getResponse().getResult().getResults());
+        packagesListView.setAdapter(packagesSearchAdapter);
+        packagesListView.setVisibility(View.VISIBLE);
+
     }
 
     @Subscribe

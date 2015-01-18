@@ -5,9 +5,14 @@ import com.squareup.otto.Subscribe;
 
 import eu.fiskur.fiskurdatagov.events.ErrorEvent;
 import eu.fiskur.fiskurdatagov.events.LoadTagsEvent;
+import eu.fiskur.fiskurdatagov.events.PackageSearchEvent;
+import eu.fiskur.fiskurdatagov.events.PackageSearchResultsEvent;
 import eu.fiskur.fiskurdatagov.events.ShowTagEvent;
 import eu.fiskur.fiskurdatagov.events.TagPackagesLoadedEvent;
 import eu.fiskur.fiskurdatagov.events.TagsLoadedEvent;
+import eu.fiskur.fiskurdatagov.responses.PackageSearchResponse;
+import eu.fiskur.fiskurdatagov.responses.TagListResponse;
+import eu.fiskur.fiskurdatagov.responses.TagShowResponse;
 import retrofit.Callback;
 import retrofit.RetrofitError;
 import retrofit.client.Response;
@@ -47,6 +52,21 @@ public class DataGovRepository {
             @Override
             public void success(TagShowResponse tagShowResponse, Response response) {
                 bus.post(new TagPackagesLoadedEvent(tagShowResponse));
+            }
+
+            @Override
+            public void failure(RetrofitError error) {
+                bus.post(new ErrorEvent(error.getMessage()));
+            }
+        });
+    }
+
+    @Subscribe
+    public void onSearchPackages(PackageSearchEvent event){
+        api.searchPackages(event.getQuery(), new Callback<PackageSearchResponse>() {
+            @Override
+            public void success(PackageSearchResponse packageSearchResponse, Response response) {
+                bus.post(new PackageSearchResultsEvent(packageSearchResponse));
             }
 
             @Override
