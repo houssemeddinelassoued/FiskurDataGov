@@ -8,6 +8,9 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.squareup.otto.Bus;
@@ -17,15 +20,23 @@ import butterknife.ButterKnife;
 import butterknife.InjectView;
 import eu.fiskur.fiskurdatagov.events.ErrorEvent;
 import eu.fiskur.fiskurdatagov.events.LoadTagsEvent;
+import eu.fiskur.fiskurdatagov.events.ShowTagEvent;
+import eu.fiskur.fiskurdatagov.events.TagPackagesLoadedEvent;
 import eu.fiskur.fiskurdatagov.events.TagsLoadedEvent;
+import eu.fiskur.fiskurdatagov.objects.*;
+import eu.fiskur.fiskurdatagov.objects.Package;
 import timber.log.Timber;
 
 
 public class MainActivity extends ActionBarActivity {
 
-    private Bus bus = BusProvider.getInstance();
-    private ArrayAdapter<String> tagsAdapter;
+    Bus bus = BusProvider.getInstance();
+    ArrayAdapter<String> tagsAdapter;
+    ArrayAdapter<Package> packagesAdapter;
+    @InjectView(R.id.search_label_text_view) TextView searchLabelTextView;
     @InjectView(R.id.autocomplete_text_view) AutoCompleteTextView autoCompleteTextView;
+    @InjectView(R.id.progress_bar) ProgressBar progressBar;
+    @InjectView(R.id.packages_list_view) ListView packagesListView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,11 +44,13 @@ public class MainActivity extends ActionBarActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.inject(this);
 
+        autoCompleteTextView.setActivated(false);
         autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 String tag = tagsAdapter.getItem(position);
-                Toast.makeText(MainActivity.this, tag, Toast.LENGTH_SHORT).show();
+                progressBar.setVisibility(View.VISIBLE);
+                bus.post(new ShowTagEvent(tag));
             }
         });
     }
@@ -59,18 +72,28 @@ public class MainActivity extends ActionBarActivity {
 
     @Subscribe
     public void onTagsLoaded(TagsLoadedEvent tagsLoadedEvent){
-        int tagCount = tagsLoadedEvent.getResponse().getResult().size();
-        Toast.makeText(MainActivity.this, "Loaded tags: " + tagCount, Toast.LENGTH_LONG).show();
-        Timber.d("onTagsLoaded, tags count: " + tagCount);
-
+        searchLabelTextView.setText("Search tag (" + tagsLoadedEvent.getResponse().getResult().size() + " entries)");
         tagsAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, tagsLoadedEvent.getResponse().getResult());
         autoCompleteTextView.setAdapter(tagsAdapter);
+        autoCompleteTextView.setActivated(true);
+        progressBar.setVisibility(View.GONE);
+    }
+
+    @Subscribe
+    public void onTagPackagesLoaded(TagPackagesLoadedEvent tagPackagesLoadedEvent){
+        Timber.d(tagPackagesLoadedEvent.getResponse().getResult().toString());
+        progressBar.setVisibility(View.GONE);
+
+        packagesAdapter = new ArrayAdapter<Package>(MainActivity.this, android.R.layout.simple_list_item_1, android.R.id.text1, tagPackagesLoadedEvent.getResponse().getResult().getPackages());
+        packagesListView.setAdapter(packagesAdapter);
+        packagesListView.setVisibility(View.VISIBLE);
     }
 
     @Subscribe
     public void onApiError(ErrorEvent error) {
         Toast.makeText(MainActivity.this, error.getError(), Toast.LENGTH_LONG).show();
         Timber.e(error.getError());
+        progressBar.setVisibility(View.GONE);
     }
 
     @Override
