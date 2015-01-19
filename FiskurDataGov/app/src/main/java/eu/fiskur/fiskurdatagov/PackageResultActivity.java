@@ -5,11 +5,13 @@ import android.net.Uri;
 import android.support.v4.app.NavUtils;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -24,8 +26,6 @@ import timber.log.Timber;
 public class PackageResultActivity extends ActionBarActivity {
 
     @InjectView(R.id.results_list_view) ListView resultsListView;
-    @InjectView(R.id.resource_title_label) TextView resourceTitleTextView;
-    @InjectView(R.id.resource_content_label) TextView resourceContentTextView;
     PackageSearchResultObject resultObj;
     ArrayAdapter<PackageSearchResultObjectResource> resultResourceAdapter;
 
@@ -43,22 +43,39 @@ public class PackageResultActivity extends ActionBarActivity {
             buildScreen();
         }else{
             Timber.e("No extras object");
-            resourceTitleTextView.setText("No resource available");
         }
     }
 
     private void buildScreen(){
         Timber.d("Number of resources: " + resultObj.getResources().size());
 
+        LinearLayout listHeader = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.list_header, null);
+        TextView titleView = TextView.class.cast(listHeader.findViewById(R.id.list_header_title_label));
+        titleView.setText(resultObj.getTitle());
 
+        TextView subtitleView = TextView.class.cast(listHeader.findViewById(R.id.list_header_content_label));
+
+        Organization org = resultObj.getOrganization();
+        String label = "";
+        label = append(label, "Organisation", org.getTitle(), true);
+        label = append(label, "Notes", resultObj.getNotes(), false);
+        label = append(label, "Contact", resultObj.getContactEmail(), false);
+
+        subtitleView.setText(label);
 
         resultResourceAdapter = new ArrayAdapter<PackageSearchResultObjectResource>(this, android.R.layout.simple_list_item_1, resultObj.getResources());
         resultsListView.setAdapter(resultResourceAdapter);
 
+        resultsListView.addHeaderView(listHeader);
+        resultsListView.setHeaderDividersEnabled(true);
+
         resultsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                PackageSearchResultObjectResource resource = resultResourceAdapter.getItem(position);
+                if(position == 0){
+                    return;
+                }
+                PackageSearchResultObjectResource resource = resultResourceAdapter.getItem(position - 1);
                 String url = resource.getUrl();
                 Timber.d("url: " + url);
                 Intent i = new Intent(Intent.ACTION_VIEW);
@@ -66,17 +83,6 @@ public class PackageResultActivity extends ActionBarActivity {
                 startActivity(i);
             }
         });
-
-
-        Organization org = resultObj.getOrganization();
-        String label = "";
-        resourceTitleTextView.setText(resultObj.getTitle());
-        label = append(label, "Organisation", org.getTitle(), true);
-        label = append(label, "Notes", resultObj.getNotes(), false);
-        label = append(label, "Contact", resultObj.getContactEmail(), false);
-
-        resourceContentTextView.setText(label);
-
     }
 
     public String append(String label, String section, String more, boolean first){
