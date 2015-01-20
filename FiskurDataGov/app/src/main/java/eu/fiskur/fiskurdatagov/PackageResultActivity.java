@@ -2,17 +2,10 @@ package eu.fiskur.fiskurdatagov;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.content.IntentSender;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.support.v4.app.NavUtils;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.util.Base64;
-import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
@@ -21,18 +14,6 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.drive.Drive;
-import com.google.android.gms.drive.DriveFolder;
-import com.google.android.gms.drive.MetadataChangeSet;
-
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.Signature;
 
 import butterknife.ButterKnife;
 import butterknife.InjectView;
@@ -47,7 +28,6 @@ public class PackageResultActivity extends ActionBarActivity {
     @InjectView(R.id.results_list_view) ListView resultsListView;
     PackageSearchResultObject resultObj;
     ArrayAdapter<PackageSearchResultObjectResource> resultResourceAdapter;
-    GoogleApiClient mGoogleApiClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,65 +43,6 @@ public class PackageResultActivity extends ActionBarActivity {
             buildScreen();
         }else{
             Timber.e("No extras object");
-        }
-
-        connectDrive();
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-
-        l("Attempting to connect to GoogleDrive");
-        mGoogleApiClient.connect();
-    }
-
-    private static final int RESOLVE_CONNECTION_REQUEST_CODE = 9876;
-
-    private void connectDrive(){
-        l("Creating GoogleDrive client");
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addApi(Drive.API)
-                .addScope(Drive.SCOPE_FILE)
-                .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
-                    @Override
-                    public void onConnected(Bundle bundle) {
-                        l("GoogleApiClient onConnected()");
-                        createRootFolder();
-                    }
-
-                    @Override
-                    public void onConnectionSuspended(int i) {
-                        l("GoogleApiClient onConnectionSuspended()");
-                    }
-                })
-                .addOnConnectionFailedListener(new GoogleApiClient.OnConnectionFailedListener() {
-                    @Override
-                    public void onConnectionFailed(ConnectionResult connectionResult) {
-                        l("GoogleApiClient onConnectionFailed()");
-                        if (connectionResult.hasResolution()) {
-                            try {
-                                connectionResult.startResolutionForResult(PackageResultActivity.this, RESOLVE_CONNECTION_REQUEST_CODE);
-                            } catch (IntentSender.SendIntentException e) {
-                                Timber.e(e.toString());
-                            }
-                        } else {
-                            Timber.e(connectionResult.toString());
-                            GooglePlayServicesUtil.getErrorDialog(connectionResult.getErrorCode(), PackageResultActivity.this, 0).show();
-                        }
-                    }
-                })
-                .build();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        switch (requestCode) {
-            case RESOLVE_CONNECTION_REQUEST_CODE:
-                if (resultCode == RESULT_OK) {
-                    mGoogleApiClient.connect();
-                }
-                break;
         }
     }
 
@@ -167,7 +88,6 @@ public class PackageResultActivity extends ActionBarActivity {
                     intent.setDataAndType(Uri.parse(url), "application/vnd.ms-excel");
                     intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
-
                     try {
                         startActivity(intent);
                     }
@@ -197,7 +117,6 @@ public class PackageResultActivity extends ActionBarActivity {
             }else{
                 label += "\n\n" + section + ": " + more;
             }
-
         }
         return label;
     }
@@ -212,17 +131,17 @@ public class PackageResultActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    public void createRootFolder(){
-        MetadataChangeSet changeSet = new MetadataChangeSet.Builder().setTitle("DataGovUk").build();
-        Drive.DriveApi.getRootFolder(mGoogleApiClient).createFolder(mGoogleApiClient, changeSet).setResultCallback(new ResultCallback<DriveFolder.DriveFolderResult>() {
-            @Override
-            public void onResult(DriveFolder.DriveFolderResult driveFolderResult) {
-                if (!driveFolderResult.getStatus().isSuccess()) {
-                    l("Error while trying to create the folder");
-                    return;
-                }
-                l("Created a folder: " + driveFolderResult.getDriveFolder().getDriveId());
-            }
-        });
-    }
+//    public void createRootFolder(){
+//        MetadataChangeSet changeSet = new MetadataChangeSet.Builder().setTitle("DataGovUk").build();
+//        Drive.DriveApi.getRootFolder(mGoogleApiClient).createFolder(mGoogleApiClient, changeSet).setResultCallback(new ResultCallback<DriveFolder.DriveFolderResult>() {
+//            @Override
+//            public void onResult(DriveFolder.DriveFolderResult driveFolderResult) {
+//            if (!driveFolderResult.getStatus().isSuccess()) {
+//                l("Error while trying to create the folder");
+//                return;
+//            }
+//            l("Created a folder: " + driveFolderResult.getDriveFolder().getDriveId());
+//            }
+//        });
+//    }
 }

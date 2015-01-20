@@ -8,14 +8,14 @@ android {
         disable 'InvalidPackage'
     }
 
-    signingConfigs {
-        debug {
-            storeFile file("../fiskurdatagov.keystore.jks")
-            storePassword "stromfiskur"
-            keyAlias "alias"
-            keyPassword "stromfiskur"
-        }
-    }
+//    signingConfigs {
+//        debug {
+//            storeFile file("../fiskurdatagov.keystore.jks")
+//            storePassword "stromfiskur"
+//            keyAlias "alias"
+//            keyPassword "stromfiskur"
+//        }
+//    }
 
     defaultConfig {
         applicationId "eu.fiskur.fiskurdatagov"

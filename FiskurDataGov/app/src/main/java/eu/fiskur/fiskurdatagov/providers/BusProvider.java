@@ -1,4 +1,4 @@
-package eu.fiskur.fiskurdatagov;
+package eu.fiskur.fiskurdatagov.providers;
 
 import com.squareup.otto.Bus;
 

@@ -4,6 +4,7 @@ import android.app.Application;
 
 import com.squareup.otto.Bus;
 
+import eu.fiskur.fiskurdatagov.providers.BusProvider;
 import retrofit.RestAdapter;
 import timber.log.Timber;
 

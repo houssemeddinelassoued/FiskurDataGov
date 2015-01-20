@@ -2,6 +2,7 @@ package eu.fiskur.fiskurdatagov;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -17,6 +18,10 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.drive.Drive;
 import com.squareup.otto.Bus;
 import com.squareup.otto.Subscribe;
 
@@ -26,16 +31,18 @@ import eu.fiskur.fiskurdatagov.events.ErrorEvent;
 import eu.fiskur.fiskurdatagov.events.LoadTagsEvent;
 import eu.fiskur.fiskurdatagov.events.PackageSearchEvent;
 import eu.fiskur.fiskurdatagov.events.PackageSearchResultsEvent;
-import eu.fiskur.fiskurdatagov.events.ShowTagEvent;
 import eu.fiskur.fiskurdatagov.events.TagPackagesLoadedEvent;
 import eu.fiskur.fiskurdatagov.events.TagsLoadedEvent;
 import eu.fiskur.fiskurdatagov.objects.*;
 import eu.fiskur.fiskurdatagov.objects.Package;
+import eu.fiskur.fiskurdatagov.providers.BusProvider;
+import eu.fiskur.fiskurdatagov.providers.GoogleApiProvider;
 import timber.log.Timber;
 
 
 public class MainActivity extends ActionBarActivity {
 
+    static final int RESOLVE_CONNECTION_REQUEST_CODE = 9876;
     Bus bus = BusProvider.getInstance();
     ArrayAdapter<String> tagsAdapter = null;
     ArrayAdapter<Package> packagesAdapter;
@@ -81,6 +88,72 @@ public class MainActivity extends ActionBarActivity {
                 startActivity(intent);
             }
         });
+
+        buildDrive();
+    }
+
+    private void l(String message){
+        Timber.d(message);
+    }
+
+
+    private void buildDrive(){
+        l("Creating GoogleDrive client");
+        GoogleApiProvider.client = new GoogleApiClient.Builder(this)
+        .addApi(Drive.API)
+        .addScope(Drive.SCOPE_FILE)
+        .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
+            @Override
+            public void onConnected(Bundle bundle) {
+                l("GoogleApiClient onConnected()");
+            }
+
+            @Override
+            public void onConnectionSuspended(int i) {
+                l("GoogleApiClient onConnectionSuspended()");
+            }
+        })
+        .addOnConnectionFailedListener(new GoogleApiClient.OnConnectionFailedListener() {
+            @Override
+            public void onConnectionFailed(ConnectionResult connectionResult) {
+                l("GoogleApiClient onConnectionFailed()");
+                if (connectionResult.hasResolution()) {
+                    try {
+                        connectionResult.startResolutionForResult(MainActivity.this, RESOLVE_CONNECTION_REQUEST_CODE);
+                    } catch (IntentSender.SendIntentException e) {
+                        Timber.e(e.toString());
+                    }
+                } else {
+                    Timber.e(connectionResult.toString());
+                    GooglePlayServicesUtil.getErrorDialog(connectionResult.getErrorCode(), MainActivity.this, 0).show();
+                }
+            }
+        })
+        .build();
+    }
+
+    boolean connectAttempted = false;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        l("Attempting to connect to GoogleDrive");
+        if(!connectAttempted) {
+            connectAttempted = true;
+            GoogleApiProvider.connect();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case RESOLVE_CONNECTION_REQUEST_CODE:
+                if (resultCode == RESULT_OK) {
+                    GoogleApiProvider.connect();
+                }
+                break;
+        }
     }
 
     private void doSearch(String query){

@@ -16,8 +16,7 @@
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
-        <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version" />
-        <meta-data android:name="com.google.android.apps.drive.APP_ID" android:value="id=AIzaSyCRWj9ay8BoFsQnesMexcGJXRLp3RZniJc" />
+
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name" >
@@ -32,6 +31,7 @@
             android:label="@string/title_activity_package_result"
             android:parentActivityName="eu.fiskur.fiskurdatagov.MainActivity">
         </activity>
+        <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version" />
     </application>
 
 </manifest>
