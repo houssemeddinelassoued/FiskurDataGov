@@ -1,12 +1,10 @@
 package eu.fiskur.fiskurdatagov;
 
 import android.app.DownloadManager;
-import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.IntentSender;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Environment;
@@ -16,20 +14,9 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.drive.Drive;
-import com.google.android.gms.drive.DriveApi;
-import com.google.android.gms.drive.DriveContents;
-import com.google.android.gms.drive.DriveFolder;
-import com.google.android.gms.drive.DriveId;
-import com.google.android.gms.drive.Metadata;
-import com.google.android.gms.drive.MetadataChangeSet;
 
 import java.io.File;
 
@@ -38,7 +25,6 @@ import butterknife.InjectView;
 import eu.fiskur.fiskurdatagov.objects.Organization;
 import eu.fiskur.fiskurdatagov.objects.PackageSearchResultObject;
 import eu.fiskur.fiskurdatagov.objects.PackageSearchResultObjectResource;
-import eu.fiskur.fiskurdatagov.providers.GoogleApiProvider;
 import timber.log.Timber;
 
 
@@ -48,7 +34,6 @@ public class PackageResultActivity extends ActionBarActivity {
     @InjectView(R.id.results_list_view) ListView resultsListView;
     PackageSearchResultObject resultObj;
     ResourceAdapter resourceAdapter;
-    DriveId driveId;
     private long downloadId;
 
     @Override
@@ -63,7 +48,6 @@ public class PackageResultActivity extends ActionBarActivity {
             Timber.d("Has object in extras");
             resultObj = (PackageSearchResultObject) getIntent().getExtras().get("searchresultobj");
             buildScreen();
-            initProjectDriveId();
         }else{
             Timber.e("No extras object");
         }
@@ -106,21 +90,25 @@ public class PackageResultActivity extends ActionBarActivity {
                 String url = resource.getUrl();
                 Timber.d("url: " + url);
 
-                if(url.toLowerCase().endsWith(".xls") || url.toLowerCase().endsWith("pdf")){
-                    if(GoogleApiProvider.client.isConnected()){
-                        Timber.d("Downloading file");
-                        downloadFile(resource);
-                    }else{
-                        Timber.d("Google Drive not connected, using browser to handle file");
-                        launchBrowser(url);
-                    }
-                    return;
+                if(isFile(url)){
+                    Timber.d("Downloading file");
+                    downloadFile(resource);
                 }else{
                     launchBrowser(url);
                 }
 
             }
         });
+    }
+
+    private boolean isFile(String url){
+        String u = url.toLowerCase();
+        boolean isFile = false;
+        if(u.endsWith(".xls") || u.endsWith(".pdf") || u.endsWith(".doc") || u.endsWith("zip")){
+            isFile = true;
+        }
+
+        return isFile;
     }
 
     private void launchBrowser(String url){
@@ -148,59 +136,6 @@ public class PackageResultActivity extends ActionBarActivity {
                 return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    private void initProjectDriveId(){
-        DriveFolder rootFolder = Drive.DriveApi.getRootFolder(GoogleApiProvider.client);
-        rootFolder.listChildren(GoogleApiProvider.client).setResultCallback(new ResultCallback<DriveApi.MetadataBufferResult>() {
-            @Override
-            public void onResult(DriveApi.MetadataBufferResult result) {
-                if(result.getStatus().isSuccess()){
-                    //ODO - replace this with a query...
-                    for (Metadata md : result.getMetadataBuffer()) {
-                        if(md.isFolder() && md.getTitle().equals(FOLDER)){
-                            driveId = md.getDriveId();
-                            l("Folder already exists: " + driveId);
-                        }
-                    }
-                    if(driveId == null){
-                        l("Creating folder...");
-                        createProjectFolder();
-                    }
-                }
-            }
-        });
-    }
-
-    private void createProjectFolder(){
-        DriveFolder rootFolder = Drive.DriveApi.getRootFolder(GoogleApiProvider.client);
-        MetadataChangeSet changeSet = new MetadataChangeSet.Builder().setTitle(FOLDER).build();
-        rootFolder.createFolder(GoogleApiProvider.client, changeSet).setResultCallback(new ResultCallback<DriveFolder.DriveFolderResult>() {
-            @Override
-            public void onResult(DriveFolder.DriveFolderResult driveFolderResult) {
-                if (!driveFolderResult.getStatus().isSuccess()) {
-                    l("Error while trying to create folder");
-                    return;
-                }
-                driveId = driveFolderResult.getDriveFolder().getDriveId();
-                l("Created the folder: " + driveId);
-            }
-        });
-    }
-
-    private void saveFile(){
-        //https://github.com/googledrive/android-demos/blob/master/src/com/google/android/gms/drive/sample/demo/CreateFileActivity.java
-        Drive.DriveApi.newDriveContents(GoogleApiProvider.client).setResultCallback(new ResultCallback<DriveApi.DriveContentsResult>() {
-            @Override
-            public void onResult(DriveApi.DriveContentsResult driveContentsResult) {
-                if (!driveContentsResult.getStatus().isSuccess()) {
-                    Timber.e("Error while trying to create new file contents");
-                    return;
-                }
-                final DriveContents driveContents = driveContentsResult.getDriveContents();
-
-            }
-        });
     }
 
     private void downloadFile(PackageSearchResultObjectResource resource){
