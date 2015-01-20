@@ -39,8 +39,7 @@ public class MainActivity extends ActionBarActivity {
     static final int RESOLVE_CONNECTION_REQUEST_CODE = 9876;
     Bus bus = BusProvider.getInstance();
     ArrayAdapter<String> tagsAdapter = null;
-    ArrayAdapter<Package> packagesAdapter;
-    ArrayAdapter<PackageSearchResultObject> packagesSearchAdapter;
+    PackageAdapter packagesAdapter;
     @InjectView(R.id.search_label_text_view) TextView searchLabelTextView;
     @InjectView(R.id.autocomplete_text_view) AutoCompleteTextView autoCompleteTextView;
     @InjectView(R.id.search_button) Button searchButton;
@@ -76,7 +75,7 @@ public class MainActivity extends ActionBarActivity {
         packagesListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                PackageSearchResultObject resultObj = packagesSearchAdapter.getItem(position);
+                PackageSearchResultObject resultObj = (PackageSearchResultObject) packagesAdapter.getItem(position);
                 Intent intent = new Intent(MainActivity.this, PackageResultActivity.class);
                 intent.putExtra("searchresultobj", resultObj);
                 startActivity(intent);
@@ -117,7 +116,7 @@ public class MainActivity extends ActionBarActivity {
 
     @Subscribe
     public void onTagsLoaded(TagsLoadedEvent tagsLoadedEvent){
-        searchLabelTextView.setText("Search by tag (" + tagsLoadedEvent.getResponse().getResult().size() + " tags) or keyword");
+        //searchLabelTextView.setText("Search by tag (" + tagsLoadedEvent.getResponse().getResult().size() + " tags) or keyword");
         tagsAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, tagsLoadedEvent.getResponse().getResult());
         autoCompleteTextView.setAdapter(tagsAdapter);
         autoCompleteTextView.setActivated(true);
@@ -125,22 +124,12 @@ public class MainActivity extends ActionBarActivity {
     }
 
     @Subscribe
-    public void onTagPackagesLoaded(TagPackagesLoadedEvent tagPackagesLoadedEvent){
-        Timber.d(tagPackagesLoadedEvent.getResponse().getResult().toString());
-        progressBar.setVisibility(View.GONE);
-
-        packagesAdapter = new ArrayAdapter<Package>(MainActivity.this, android.R.layout.simple_list_item_1, android.R.id.text1, tagPackagesLoadedEvent.getResponse().getResult().getPackages());
-        packagesListView.setAdapter(packagesAdapter);
-        packagesListView.setVisibility(View.VISIBLE);
-    }
-
-    @Subscribe
     public void onPackageSearchResults(PackageSearchResultsEvent packageSearchResultsEvent){
         Timber.d("Package Search returned...");
         progressBar.setVisibility(View.GONE);
 
-        packagesSearchAdapter = new ArrayAdapter<PackageSearchResultObject>(MainActivity.this, android.R.layout.simple_list_item_1, android.R.id.text1, packageSearchResultsEvent.getResponse().getResult().getResults());
-        packagesListView.setAdapter(packagesSearchAdapter);
+        packagesAdapter = new PackageAdapter(MainActivity.this, packageSearchResultsEvent.getResponse().getResult().getResults());
+        packagesListView.setAdapter(packagesAdapter);
         packagesListView.setVisibility(View.VISIBLE);
 
     }
