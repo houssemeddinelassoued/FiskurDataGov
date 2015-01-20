@@ -20,6 +20,7 @@ import butterknife.InjectView;
 import eu.fiskur.fiskurdatagov.objects.Organization;
 import eu.fiskur.fiskurdatagov.objects.PackageSearchResultObject;
 import eu.fiskur.fiskurdatagov.objects.PackageSearchResultObjectResource;
+import eu.fiskur.fiskurdatagov.providers.GoogleApiProvider;
 import timber.log.Timber;
 
 
@@ -27,7 +28,7 @@ public class PackageResultActivity extends ActionBarActivity {
 
     @InjectView(R.id.results_list_view) ListView resultsListView;
     PackageSearchResultObject resultObj;
-    ArrayAdapter<PackageSearchResultObjectResource> resultResourceAdapter;
+    ResourceAdapter resourceAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,8 +68,8 @@ public class PackageResultActivity extends ActionBarActivity {
 
         subtitleView.setText(label);
 
-        resultResourceAdapter = new ArrayAdapter<PackageSearchResultObjectResource>(this, android.R.layout.simple_list_item_1, resultObj.getResources());
-        resultsListView.setAdapter(resultResourceAdapter);
+        resourceAdapter = new ResourceAdapter(this, resultObj.getResources());
+        resultsListView.setAdapter(resourceAdapter);
 
         resultsListView.addHeaderView(listHeader);
         resultsListView.setHeaderDividersEnabled(true);
@@ -79,20 +80,16 @@ public class PackageResultActivity extends ActionBarActivity {
                 if(position == 0){
                     return;
                 }
-                PackageSearchResultObjectResource resource = resultResourceAdapter.getItem(position - 1);
+                PackageSearchResultObjectResource resource = (PackageSearchResultObjectResource)resourceAdapter.getItem(position - 1);
                 String url = resource.getUrl();
                 Timber.d("url: " + url);
 
-                if(url.endsWith(".xls")){
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.setDataAndType(Uri.parse(url), "application/vnd.ms-excel");
-                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-
-                    try {
-                        startActivity(intent);
-                    }
-                    catch (ActivityNotFoundException e) {
-                        Toast.makeText(PackageResultActivity.this, "No Application Available to View Excel", Toast.LENGTH_SHORT).show();
+                if(url.toLowerCase().endsWith(".xls") || url.toLowerCase().endsWith("pdf")){
+                    if(GoogleApiProvider.client.isConnected()){
+                        Timber.d("Sending file to Google Drive");
+                        //Send to Google Drive
+                    }else{
+                        Timber.d("Google Drive not connected, using browser to handle file");
                         launchBrowser(url);
                     }
                     return;

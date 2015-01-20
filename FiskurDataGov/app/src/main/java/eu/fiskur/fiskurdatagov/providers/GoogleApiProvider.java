@@ -10,7 +10,7 @@ public class GoogleApiProvider {
     public static GoogleApiClient client = null;
 
     public static void connect(){
-        if(client != null){
+        if(client != null && !client.isConnected()){
             client.connect();
         }
     }

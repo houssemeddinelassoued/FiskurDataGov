@@ -23,12 +23,20 @@ public class PackageSearchResultObjectResource implements Serializable{
     String resource_type;
     int size;
 
+    public PackageSearchResultObjectResource(){
+
+    }
+
     public String getCacheUrl(){
         return cache_url;
     }
 
     public String getUrl(){
         return url;
+    }
+
+    public String getFormat(){
+        return format;
     }
 
     @Override
@@ -47,7 +55,7 @@ public class PackageSearchResultObjectResource implements Serializable{
         }
         sb.append(description);
 
-        if(format != null && !format.isEmpty()){
+        if(format != null && !format.isEmpty() && !format.toLowerCase().equals("html") && !format.toLowerCase().equals("shtml")){
             sb.append(" (" + format + ")");
         }
 
