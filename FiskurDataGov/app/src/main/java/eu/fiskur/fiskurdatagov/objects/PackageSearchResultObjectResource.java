@@ -53,9 +53,13 @@ public class PackageSearchResultObjectResource implements Serializable{
             }
             sb.append(description);
         }
-        sb.append(description);
 
-        if(format != null && !format.isEmpty() && !format.toLowerCase().equals("html") && !format.toLowerCase().equals("shtml")){
+        if(format != null &&
+                !format.isEmpty() &&
+                !format.toLowerCase().equals("html") &&
+                !format.toLowerCase().equals("shtml") &&
+                !format.toLowerCase().equals("pdf") &&
+                !format.toLowerCase().equals("xls")){
             sb.append(" (" + format + ")");
         }
 

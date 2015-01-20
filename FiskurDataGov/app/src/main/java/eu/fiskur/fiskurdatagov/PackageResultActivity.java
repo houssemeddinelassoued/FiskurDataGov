@@ -15,6 +15,14 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.drive.Drive;
+import com.google.android.gms.drive.DriveApi;
+import com.google.android.gms.drive.DriveFolder;
+import com.google.android.gms.drive.DriveId;
+import com.google.android.gms.drive.Metadata;
+import com.google.android.gms.drive.MetadataChangeSet;
+
 import butterknife.ButterKnife;
 import butterknife.InjectView;
 import eu.fiskur.fiskurdatagov.objects.Organization;
@@ -25,10 +33,11 @@ import timber.log.Timber;
 
 
 public class PackageResultActivity extends ActionBarActivity {
-
+    private static final String FOLDER = "DataGovUKFiles";
     @InjectView(R.id.results_list_view) ListView resultsListView;
     PackageSearchResultObject resultObj;
     ResourceAdapter resourceAdapter;
+    DriveId driveId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +51,7 @@ public class PackageResultActivity extends ActionBarActivity {
             Timber.d("Has object in extras");
             resultObj = (PackageSearchResultObject) getIntent().getExtras().get("searchresultobj");
             buildScreen();
+            initProjectDriveId();
         }else{
             Timber.e("No extras object");
         }
@@ -128,17 +138,41 @@ public class PackageResultActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
-//    public void createRootFolder(){
-//        MetadataChangeSet changeSet = new MetadataChangeSet.Builder().setTitle("DataGovUk").build();
-//        Drive.DriveApi.getRootFolder(mGoogleApiClient).createFolder(mGoogleApiClient, changeSet).setResultCallback(new ResultCallback<DriveFolder.DriveFolderResult>() {
-//            @Override
-//            public void onResult(DriveFolder.DriveFolderResult driveFolderResult) {
-//            if (!driveFolderResult.getStatus().isSuccess()) {
-//                l("Error while trying to create the folder");
-//                return;
-//            }
-//            l("Created a folder: " + driveFolderResult.getDriveFolder().getDriveId());
-//            }
-//        });
-//    }
+    public void initProjectDriveId(){
+        DriveFolder rootFolder = Drive.DriveApi.getRootFolder(GoogleApiProvider.client);
+        rootFolder.listChildren(GoogleApiProvider.client).setResultCallback(new ResultCallback<DriveApi.MetadataBufferResult>() {
+            @Override
+            public void onResult(DriveApi.MetadataBufferResult result) {
+                if(result.getStatus().isSuccess()){
+                    //ODO - replace this with a query...
+                    for (Metadata md : result.getMetadataBuffer()) {
+                        if(md.isFolder() && md.getTitle().equals(FOLDER)){
+                            driveId = md.getDriveId();
+                            l("Folder already exists: " + driveId);
+                        }
+                    }
+                    if(driveId == null){
+                        l("Creating folder...");
+                        createProjectFolder();
+                    }
+                }
+            }
+        });
+    }
+
+    private void createProjectFolder(){
+        DriveFolder rootFolder = Drive.DriveApi.getRootFolder(GoogleApiProvider.client);
+        MetadataChangeSet changeSet = new MetadataChangeSet.Builder().setTitle(FOLDER).build();
+        rootFolder.createFolder(GoogleApiProvider.client, changeSet).setResultCallback(new ResultCallback<DriveFolder.DriveFolderResult>() {
+            @Override
+            public void onResult(DriveFolder.DriveFolderResult driveFolderResult) {
+                if (!driveFolderResult.getStatus().isSuccess()) {
+                    l("Error while trying to create folder");
+                    return;
+                }
+                driveId = driveFolderResult.getDriveFolder().getDriveId();
+                l("Created the folder: " + driveId);
+            }
+        });
+    }
 }
