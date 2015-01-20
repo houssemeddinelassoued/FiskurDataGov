@@ -106,7 +106,7 @@ public class PackageResultActivity extends ActionBarActivity {
     private boolean isFile(String url){
         String u = url.toLowerCase();
         boolean isFile = false;
-        if(u.endsWith(".xls") || u.endsWith(".pdf") || u.endsWith(".doc") || u.endsWith("zip")){
+        if(u.endsWith(".xls") || u.endsWith(".pdf") || u.endsWith(".doc") || u.endsWith("zip") || u.endsWith("csv")){
             isFile = true;
         }
 
