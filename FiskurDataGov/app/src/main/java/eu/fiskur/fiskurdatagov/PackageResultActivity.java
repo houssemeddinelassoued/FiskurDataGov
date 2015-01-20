@@ -1,8 +1,15 @@
 package eu.fiskur.fiskurdatagov;
 
+import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.IntentSender;
+import android.database.Cursor;
 import android.net.Uri;
+import android.os.Environment;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -18,10 +25,13 @@ import android.widget.Toast;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.drive.Drive;
 import com.google.android.gms.drive.DriveApi;
+import com.google.android.gms.drive.DriveContents;
 import com.google.android.gms.drive.DriveFolder;
 import com.google.android.gms.drive.DriveId;
 import com.google.android.gms.drive.Metadata;
 import com.google.android.gms.drive.MetadataChangeSet;
+
+import java.io.File;
 
 import butterknife.ButterKnife;
 import butterknife.InjectView;
@@ -34,10 +44,12 @@ import timber.log.Timber;
 
 public class PackageResultActivity extends ActionBarActivity {
     private static final String FOLDER = "DataGovUKFiles";
+    private static final int CREATE_FILE = 234;
     @InjectView(R.id.results_list_view) ListView resultsListView;
     PackageSearchResultObject resultObj;
     ResourceAdapter resourceAdapter;
     DriveId driveId;
+    private long downloadId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,8 +108,8 @@ public class PackageResultActivity extends ActionBarActivity {
 
                 if(url.toLowerCase().endsWith(".xls") || url.toLowerCase().endsWith("pdf")){
                     if(GoogleApiProvider.client.isConnected()){
-                        Timber.d("Sending file to Google Drive");
-                        //Send to Google Drive
+                        Timber.d("Downloading file");
+                        downloadFile(resource);
                     }else{
                         Timber.d("Google Drive not connected, using browser to handle file");
                         launchBrowser(url);
@@ -138,7 +150,7 @@ public class PackageResultActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    public void initProjectDriveId(){
+    private void initProjectDriveId(){
         DriveFolder rootFolder = Drive.DriveApi.getRootFolder(GoogleApiProvider.client);
         rootFolder.listChildren(GoogleApiProvider.client).setResultCallback(new ResultCallback<DriveApi.MetadataBufferResult>() {
             @Override
@@ -175,4 +187,65 @@ public class PackageResultActivity extends ActionBarActivity {
             }
         });
     }
+
+    private void saveFile(){
+        //https://github.com/googledrive/android-demos/blob/master/src/com/google/android/gms/drive/sample/demo/CreateFileActivity.java
+        Drive.DriveApi.newDriveContents(GoogleApiProvider.client).setResultCallback(new ResultCallback<DriveApi.DriveContentsResult>() {
+            @Override
+            public void onResult(DriveApi.DriveContentsResult driveContentsResult) {
+                if (!driveContentsResult.getStatus().isSuccess()) {
+                    Timber.e("Error while trying to create new file contents");
+                    return;
+                }
+                final DriveContents driveContents = driveContentsResult.getDriveContents();
+
+            }
+        });
+    }
+
+    private void downloadFile(PackageSearchResultObjectResource resource){
+        registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        String url = resource.getUrl();
+        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+        request.setDescription("Downloaded using Fiskur Data.Gov app");
+        request.setTitle(resource.getTitle());
+        request.allowScanningByMediaScanner();
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+        String filename = url.substring(url.lastIndexOf("/") + 1, url.length());
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename);
+        DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        downloadId = manager.enqueue(request);
+    }
+
+    BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
+        public void onReceive(Context ctxt, Intent intent) {
+            Timber.d("onDownloadComplete BroadcastReceiver...");
+
+            Long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0);
+
+            if(downloadId == id){
+                Timber.d("Gov.uk file is ready...");
+                DownloadManager.Query query = new DownloadManager.Query();
+                query.setFilterById(downloadId);
+                DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                Cursor cur = manager.query(query);
+
+                if (cur.moveToFirst()) {
+                    int columnIndex = cur.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                    if (DownloadManager.STATUS_SUCCESSFUL == cur.getInt(columnIndex)) {
+                        String uriString = cur.getString(cur.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI));
+
+                        File mFile = new File(Uri.parse(uriString).getPath());
+                        if(mFile.exists()){
+                            Timber.d("File Exists!");
+                        }
+
+                    } else {
+                        Timber.e("File did not download successfully");
+                    }
+                }
+            }
+        }
+    };
+
 }

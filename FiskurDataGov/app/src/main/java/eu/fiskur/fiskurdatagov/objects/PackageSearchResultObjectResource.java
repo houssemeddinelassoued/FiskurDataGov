@@ -39,6 +39,22 @@ public class PackageSearchResultObjectResource implements Serializable{
         return format;
     }
 
+    public String getTitle(){
+        StringBuffer sb = new StringBuffer();
+        boolean hasName = false;
+        if(name != null && !name.isEmpty()){
+            hasName = true;
+            sb.append(name);
+        }
+        if(description != null && !description.isEmpty()){
+            if(hasName){
+                sb.append(": ");
+            }
+            sb.append(description);
+        }
+        return sb.toString();
+    }
+
     @Override
     public String toString() {
         StringBuffer sb = new StringBuffer();
