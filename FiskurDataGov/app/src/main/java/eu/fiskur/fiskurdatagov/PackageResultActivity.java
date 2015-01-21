@@ -85,20 +85,19 @@ public class PackageResultActivity extends ActionBarActivity {
         resultsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if(position == 0){
-                    return;
-                }
-                PackageSearchResultObjectResource resource = (PackageSearchResultObjectResource)resourceAdapter.getItem(position - 1);
-                String url = resource.getUrl();
-                Timber.d("url: " + url);
+            if(position == 0){
+                return;
+            }
+            PackageSearchResultObjectResource resource = (PackageSearchResultObjectResource)resourceAdapter.getItem(position - 1);
+            String url = resource.getUrl();
+            Timber.d("url: " + url);
 
-                if(isFile(url)){
-                    Timber.d("Downloading file");
-                    downloadFile(resource);
-                }else{
-                    launchBrowser(url);
-                }
-
+            if(isFile(url)){
+                Timber.d("Downloading file");
+                downloadFile(resource);
+            }else{
+                launchBrowser(url);
+            }
             }
         });
     }
@@ -106,7 +105,16 @@ public class PackageResultActivity extends ActionBarActivity {
     private boolean isFile(String url){
         String u = url.toLowerCase();
         boolean isFile = false;
-        if(u.endsWith(".xls") || u.endsWith(".pdf") || u.endsWith(".doc") || u.endsWith("zip") || u.endsWith("csv")){
+        if(u.endsWith(".xls")
+                || u.endsWith(".xlsx")
+                || u.endsWith(".pdf")
+                || u.endsWith(".doc")
+                || u.endsWith(".docx")
+                || u.endsWith(".zip")
+                || u.endsWith(".txt")
+                || u.endsWith(".ppt")
+                || u.endsWith(".pptx")
+                || u.endsWith(".csv")){
             isFile = true;
         }
 
@@ -140,11 +148,22 @@ public class PackageResultActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void downloadFile(PackageSearchResultObjectResource resource){
+    @Override
+    protected void onStart() {
+        super.onStart();
         registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(onDownloadComplete);
+    }
+
+    private void downloadFile(PackageSearchResultObjectResource resource){
+
         String url = resource.getUrl();
         DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-        request.setDescription("Downloaded using Fiskur Data.Gov app");
         request.setTitle(resource.getTitle());
         request.allowScanningByMediaScanner();
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
@@ -196,9 +215,7 @@ public class PackageResultActivity extends ActionBarActivity {
         Uri uri = Uri.fromFile(file);
 
         Intent intent = new Intent(Intent.ACTION_VIEW);
-        // Check what kind of file you are trying to open, by comparing the url with extensions.
-        // When the if condition is matched, plugin sets the correct intent (mime) type,
-        // so Android knew what application to use to open the file
+
         if (url.toString().contains(".doc") || url.toString().contains(".docx")) {
             // Word document
             intent.setDataAndType(uri, "application/msword");
@@ -233,11 +250,6 @@ public class PackageResultActivity extends ActionBarActivity {
             // Video files
             intent.setDataAndType(uri, "video/*");
         } else {
-            //if you want you can also define the intent type for any other file
-
-            //additionally use else clause below, to manage other unknown extensions
-            //in this case, Android will show all applications installed on the device
-            //so you can choose which application to use
             intent.setDataAndType(uri, "*/*");
         }
 
