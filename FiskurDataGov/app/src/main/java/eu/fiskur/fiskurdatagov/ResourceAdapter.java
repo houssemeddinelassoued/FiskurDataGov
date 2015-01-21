@@ -58,7 +58,7 @@ public class ResourceAdapter extends BaseAdapter {
 
         ImageView resourceImage = ViewHolder.get(convertView, R.id.resource_type);
         String format = res.getFormat().toLowerCase();
-        if(format == null || format.isEmpty()){
+        if(format.isEmpty()){
             resourceImage.setVisibility(View.GONE);
         }else if(format.equals("xls")){
             resourceImage.setVisibility(View.VISIBLE);

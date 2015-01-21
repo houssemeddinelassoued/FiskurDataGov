@@ -36,7 +36,15 @@ public class PackageSearchResultObjectResource implements Serializable{
     }
 
     public String getFormat(){
-        return format;
+        if(format == null){
+            return "";
+        }else {
+            return format;
+        }
+    }
+
+    public void setName(String name){
+        this.name = name;
     }
 
     public String getTitle(){

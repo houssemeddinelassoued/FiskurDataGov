@@ -14,6 +14,7 @@
         tools:text="Test Resource with a long title to see how wrapping works. 20 Willow Way Didsbuyry Manchester, M20 6JS"
         android:textAppearance="?android:attr/textAppearanceListItemSmall"
         android:paddingTop="8dp"
+        android:paddingRight="16dp"
         android:paddingStart="?android:attr/listPreferredItemPaddingStart" />
 
     <TextView
@@ -25,6 +26,7 @@
         android:textColor="#666666"
         android:paddingTop="4dp"
         android:paddingBottom="6dp"
-        android:paddingLeft="16dp" />
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"/>
 
 </LinearLayout>

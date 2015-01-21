@@ -21,6 +21,7 @@ import android.widget.TextView;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import butterknife.ButterKnife;
 import butterknife.InjectView;
@@ -76,7 +77,18 @@ public class PackageResultActivity extends ActionBarActivity {
 
         subtitleView.setText(label);
 
-        resourceAdapter = new ResourceAdapter(this, resultObj.getResources());
+        int numResource = resultObj.getResourceCount();
+        if(numResource > 0){
+            resourceAdapter = new ResourceAdapter(this, resultObj.getResources());
+        }else{
+            //TODO - this is messy
+            PackageSearchResultObjectResource dummy = new PackageSearchResultObjectResource();
+            dummy.setName("No resources found");
+            ArrayList<PackageSearchResultObjectResource> dummyArr = new ArrayList<PackageSearchResultObjectResource>();
+            dummyArr.add(dummy);
+            resourceAdapter = new ResourceAdapter(this, dummyArr);
+        }
+
         resultsListView.setAdapter(resourceAdapter);
 
         resultsListView.addHeaderView(listHeader);
@@ -90,6 +102,10 @@ public class PackageResultActivity extends ActionBarActivity {
             }
             PackageSearchResultObjectResource resource = (PackageSearchResultObjectResource)resourceAdapter.getItem(position - 1);
             String url = resource.getUrl();
+            if(url == null || url.isEmpty()){
+                Timber.d("No Url in object");
+                return;
+            }
             Timber.d("url: " + url);
 
             if(isFile(url)){
@@ -175,38 +191,38 @@ public class PackageResultActivity extends ActionBarActivity {
 
     BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
         public void onReceive(Context ctxt, Intent intent) {
-            Timber.d("onDownloadComplete BroadcastReceiver...");
+        Timber.d("onDownloadComplete BroadcastReceiver...");
 
-            Long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0);
+        Long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0);
 
-            if(downloadId == id){
-                Timber.d("Gov.uk file is ready...");
-                DownloadManager.Query query = new DownloadManager.Query();
-                query.setFilterById(downloadId);
-                DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-                Cursor cur = manager.query(query);
+        if(downloadId == id){
+            Timber.d("Gov.uk file is ready...");
+            DownloadManager.Query query = new DownloadManager.Query();
+            query.setFilterById(downloadId);
+            DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            Cursor cur = manager.query(query);
 
-                if (cur.moveToFirst()) {
-                    int columnIndex = cur.getColumnIndex(DownloadManager.COLUMN_STATUS);
-                    if (DownloadManager.STATUS_SUCCESSFUL == cur.getInt(columnIndex)) {
-                        String uriString = cur.getString(cur.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI));
+            if (cur.moveToFirst()) {
+                int columnIndex = cur.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                if (DownloadManager.STATUS_SUCCESSFUL == cur.getInt(columnIndex)) {
+                    String uriString = cur.getString(cur.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI));
 
-                        File mFile = new File(Uri.parse(uriString).getPath());
-                        if(mFile.exists()){
-                            Timber.d("File Exists!");
-                            try {
-                                openFile(mFile, mFile.getName());
-                            } catch(ActivityNotFoundException e){
-                                Timber.e(e.toString());
-                            } catch (IOException e) {
-                                Timber.e(e.toString());
-                            }
+                    File mFile = new File(Uri.parse(uriString).getPath());
+                    if(mFile.exists()){
+                        Timber.d("File Exists!");
+                        try {
+                            openFile(mFile, mFile.getName());
+                        } catch(ActivityNotFoundException e){
+                            Timber.e(e.toString());
+                        } catch (IOException e) {
+                            Timber.e(e.toString());
                         }
-                    } else {
-                        Timber.e("File did not download successfully");
                     }
+                } else {
+                    Timber.e("File did not download successfully");
                 }
             }
+        }
         }
     };
 
