@@ -68,7 +68,6 @@ public class ResourceAdapter extends BaseAdapter {
             resourceImage.setImageResource(R.drawable.ic_pdf);
         }
 
-
         return convertView;
     }
 
