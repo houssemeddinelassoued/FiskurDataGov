@@ -28,7 +28,7 @@ public class FiskurDataGovApp extends Application{
                 .setEndpoint("http://data.gov.uk/api/action")
                 .build().create(Api.class);
 
-        dataGovRepo = new DataGovRepository(api, bus);
+        dataGovRepo = new DataGovRepository(api, bus, this);
         bus.register(dataGovRepo);
         bus.register(this);
     }
