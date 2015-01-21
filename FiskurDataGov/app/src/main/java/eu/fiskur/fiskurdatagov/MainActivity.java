@@ -17,6 +17,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.afollestad.materialdialogs.MaterialDialog;
 import com.squareup.otto.Bus;
 import com.squareup.otto.Subscribe;
 
@@ -52,6 +53,8 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.inject(this);
+
+        getSupportActionBar().setTitle(R.string.full_app_name);
 
         imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 
@@ -151,7 +154,11 @@ public class MainActivity extends ActionBarActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.action_about) {
-            //TODO
+            new MaterialDialog.Builder(MainActivity.this)
+                    .title(R.string.app_name)
+                    .content(R.string.about)
+                    .positiveText("Ok")
+                    .show();
             return true;
         }
 

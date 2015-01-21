@@ -109,7 +109,6 @@ public class PackageResultActivity extends ActionBarActivity {
             Timber.d("url: " + url);
 
             if(isFile(url)){
-                Timber.d("Downloading file");
                 downloadFile(resource);
             }else{
                 launchBrowser(url);
@@ -191,12 +190,9 @@ public class PackageResultActivity extends ActionBarActivity {
 
     BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
         public void onReceive(Context ctxt, Intent intent) {
-        Timber.d("onDownloadComplete BroadcastReceiver...");
-
         Long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0);
 
         if(downloadId == id){
-            Timber.d("Gov.uk file is ready...");
             DownloadManager.Query query = new DownloadManager.Query();
             query.setFilterById(downloadId);
             DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
@@ -209,7 +205,6 @@ public class PackageResultActivity extends ActionBarActivity {
 
                     File mFile = new File(Uri.parse(uriString).getPath());
                     if(mFile.exists()){
-                        Timber.d("File Exists!");
                         try {
                             openFile(mFile, mFile.getName());
                         } catch(ActivityNotFoundException e){
@@ -219,7 +214,7 @@ public class PackageResultActivity extends ActionBarActivity {
                         }
                     }
                 } else {
-                    Timber.e("File did not download successfully");
+                    //Timber.e("File did not download successfully");
                 }
             }
         }
