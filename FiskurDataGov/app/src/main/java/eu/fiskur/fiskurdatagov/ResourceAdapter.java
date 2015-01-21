@@ -63,9 +63,6 @@ public class ResourceAdapter extends BaseAdapter {
         }else if(format.equals("xls")){
             resourceImage.setVisibility(View.VISIBLE);
             resourceImage.setImageResource(R.drawable.ic_excel);
-        }else if(format.equals("zip")){
-            resourceImage.setVisibility(View.VISIBLE);
-            resourceImage.setImageResource(R.drawable.ic_zip);
         }else if(format.equals("pdf")){
             resourceImage.setVisibility(View.VISIBLE);
             resourceImage.setImageResource(R.drawable.ic_pdf);
