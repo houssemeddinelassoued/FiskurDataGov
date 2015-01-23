@@ -47,7 +47,7 @@ public class DataGovRepository {
         Timber.d("onLoadTags(LoadTagsEvent event)");
 
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Activity.MODE_PRIVATE);
-        if(prefs.contains("tags") && prefs.contains("timstamp")){
+        if(prefs.contains("tags") && prefs.contains("timestamp")){
             Set<String> set = prefs.getStringSet("tags", null);
             long timestamp = prefs.getLong("timestamp", 0);
             if(set == null || updateTagsRequired(timestamp)){
