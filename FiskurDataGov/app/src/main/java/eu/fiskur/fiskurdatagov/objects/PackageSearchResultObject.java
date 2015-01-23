@@ -13,7 +13,7 @@ public class PackageSearchResultObject implements Serializable {
     String maintainer;
     @SerializedName("temporal_coverage-from") String temporal_coverage_from;
     String data_dict;
-    String mandate;
+    //String mandate;
     @SerializedName("private") boolean isPrivate;
     String maintainer_email;
     String revision_timestamp;
