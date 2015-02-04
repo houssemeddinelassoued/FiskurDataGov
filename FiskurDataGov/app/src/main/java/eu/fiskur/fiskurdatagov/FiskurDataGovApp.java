@@ -15,8 +15,8 @@ import static timber.log.Timber.DebugTree;
  */
 public class FiskurDataGovApp extends Application{
 
-    private Bus bus = BusProvider.getInstance();
-    private DataGovRepository dataGovRepo;
+    Bus bus = BusProvider.getInstance();
+    DataGovRepository dataGovRepo;
 
     @Override
     public void onCreate() {
