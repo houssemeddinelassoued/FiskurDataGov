@@ -14,6 +14,5 @@ public class BusProvider{
     }
 
     private BusProvider() {
-        // No instances.
     }
 }
