@@ -22,7 +22,7 @@ import eu.fiskur.fiskurdatagov.objects.PackageSearchResultObjectResource;
 public class PackageAdapter extends BaseAdapter {
 
     Context context;
-    private LayoutInflater inflater;
+    LayoutInflater inflater;
     List<PackageSearchResultObject> packages = Collections.emptyList();
 
     public PackageAdapter(Context context, List<PackageSearchResultObject> packages){
