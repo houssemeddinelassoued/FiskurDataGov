@@ -21,7 +21,7 @@ import eu.fiskur.fiskurdatagov.objects.PackageSearchResultObjectResource;
 public class ResourceAdapter extends BaseAdapter {
 
     Context context;
-    private LayoutInflater inflater;
+    LayoutInflater inflater;
     List<PackageSearchResultObjectResource> resources = Collections.emptyList();
 
     public ResourceAdapter(Context context, List<PackageSearchResultObjectResource> resources){
