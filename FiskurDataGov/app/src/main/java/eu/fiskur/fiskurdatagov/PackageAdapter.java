@@ -13,31 +13,32 @@ import android.widget.TextView;
 import java.util.Collections;
 import java.util.List;
 
+import eu.fiskur.fiskurdatagov.objects.PackageSearchResultObject;
 import eu.fiskur.fiskurdatagov.objects.PackageSearchResultObjectResource;
 
 /**
  * Created by jonathan.fisher on 20/01/2015.
  */
-public class ResourceAdapter extends BaseAdapter {
+public class PackageAdapter extends BaseAdapter {
 
     Context context;
     LayoutInflater inflater;
-    List<PackageSearchResultObjectResource> resources = Collections.emptyList();
+    List<PackageSearchResultObject> packages = Collections.emptyList();
 
-    public ResourceAdapter(Context context, List<PackageSearchResultObjectResource> resources){
+    public PackageAdapter(Context context, List<PackageSearchResultObject> packages){
         this.context = context;
-        this.resources = resources;
+        this.packages = packages;
         inflater = ((Activity)context).getLayoutInflater();
     }
 
     @Override
     public int getCount() {
-        return resources.size();
+        return packages.size();
     }
 
     @Override
     public Object getItem(int position) {
-        return resources.get(position);
+        return packages.get(position);
     }
 
     @Override
@@ -48,25 +49,17 @@ public class ResourceAdapter extends BaseAdapter {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         if (convertView == null) {
-            convertView = inflater.inflate(R.layout.resource_row, parent, false);
+            convertView = inflater.inflate(R.layout.package_row, parent, false);
         }
 
-        PackageSearchResultObjectResource res = resources.get(position);
+        PackageSearchResultObject packageObj = packages.get(position);
 
-        TextView resourceLabel = ViewHolder.get(convertView, R.id.resource_label);
-        resourceLabel.setText(res.toString());
+        TextView packageLabel = ViewHolder.get(convertView, R.id.package_label);
+        packageLabel.setText(packageObj.getTitle());
 
-        ImageView resourceImage = ViewHolder.get(convertView, R.id.resource_type);
-        String format = res.getFormat().toLowerCase();
-        if(format.isEmpty()){
-            resourceImage.setVisibility(View.GONE);
-        }else if(format.equals("xls")){
-            resourceImage.setVisibility(View.VISIBLE);
-            resourceImage.setImageResource(R.drawable.ic_excel);
-        }else if(format.equals("pdf")){
-            resourceImage.setVisibility(View.VISIBLE);
-            resourceImage.setImageResource(R.drawable.ic_pdf);
-        }
+        TextView organisationLabel = ViewHolder.get(convertView, R.id.organisation_label);
+        organisationLabel.setText(packageObj.getOrganization().getTitle());
+
 
         return convertView;
     }
@@ -88,3 +81,4 @@ public class ResourceAdapter extends BaseAdapter {
         }
     }
 }
+

@@ -22,6 +22,10 @@ public class TagListResponse {
         return result;
     }
 
+    public void setResult(ArrayList<String> result){
+        this.result = result;
+    }
+
     @Override
     public String toString() {
         if(result != null){

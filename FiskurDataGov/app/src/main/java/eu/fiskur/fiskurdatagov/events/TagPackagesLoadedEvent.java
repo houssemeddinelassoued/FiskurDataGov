@@ -6,7 +6,7 @@ import eu.fiskur.fiskurdatagov.responses.TagShowResponse;
  * Created by Jonathan Fisher on 18/01/15.
  */
 public class TagPackagesLoadedEvent {
-    private TagShowResponse response;
+    TagShowResponse response;
 
     public TagPackagesLoadedEvent(TagShowResponse response){
         this.response = response;

@@ -1,7 +1,15 @@
 package eu.fiskur.fiskurdatagov;
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
+
 import com.squareup.otto.Bus;
 import com.squareup.otto.Subscribe;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import eu.fiskur.fiskurdatagov.events.ErrorEvent;
 import eu.fiskur.fiskurdatagov.events.LoadTagsEvent;
@@ -22,20 +30,68 @@ import timber.log.Timber;
  * Created by Jonathan Fisher on 17/01/15.
  */
 public class DataGovRepository {
-    private Api api;
-    private Bus bus;
+    static final long WEEK = 604800000;
+    static final String PREFS = "eu.fiskur.fiskurdatagov.DataGovRepository.PREFS";
+    static final String TAGS = "tags";
+    static final String TIMESTAMP = "timestamp";
+    Api api;
+    Bus bus;
+    Context context;
 
-    public DataGovRepository(Api api, Bus bus) {
+    public DataGovRepository(Api api, Bus bus, Context context) {
         this.api = api;
         this.bus = bus;
+        this.context = context;
     }
 
     @Subscribe
     public void onLoadTags(LoadTagsEvent event) {
         Timber.d("onLoadTags(LoadTagsEvent event)");
+
+        SharedPreferences prefs = context.getSharedPreferences(PREFS, Activity.MODE_PRIVATE);
+        if(prefs.contains(TAGS) && prefs.contains(TIMESTAMP)){
+            Set<String> set = prefs.getStringSet(TAGS, null);
+            long timestamp = prefs.getLong(TIMESTAMP, 0);
+            if(set == null || updateTagsRequired(timestamp)){
+                loadTags();
+            }else{
+                ArrayList<String> tagsList = new ArrayList<String>(set);
+                TagListResponse tagListResponse = new TagListResponse();
+                tagListResponse.setResult(tagsList);
+                bus.post(new TagsLoadedEvent(tagListResponse));
+            }
+        }else{
+            loadTags();
+        }
+    }
+
+    private boolean updateTagsRequired(long timestamp){
+        boolean update = false;
+        long period = System.currentTimeMillis() - timestamp;
+
+        if(period > WEEK){
+            update = true;
+        }
+
+        return update;
+    }
+
+    private void saveTags(TagListResponse tagListResponse){
+        Set<String> set = new HashSet<String>();
+        for(String string : tagListResponse.getResult()){
+            set.add(string);
+        }
+
+        SharedPreferences prefs = context.getSharedPreferences(PREFS, Activity.MODE_PRIVATE);
+        prefs.edit().putStringSet(TAGS, set).commit();
+        prefs.edit().putLong(TIMESTAMP, System.currentTimeMillis()).commit();
+    }
+
+    private void loadTags(){
         api.tagList(new Callback<TagListResponse>() {
             @Override
             public void success(TagListResponse tagListResponse, Response response) {
+                saveTags(tagListResponse);
                 bus.post(new TagsLoadedEvent(tagListResponse));
             }
 

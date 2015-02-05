@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/package_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        tools:text="Test Resource with a long title to see how wrapping works. 20 Willow Way Didsbuyry Manchester, M20 6JS"
+        android:textAppearance="?android:attr/textAppearanceListItemSmall"
+        android:paddingTop="8dp"
+        android:paddingRight="16dp"
+        android:paddingStart="?android:attr/listPreferredItemPaddingStart" />
+
+    <TextView
+        android:id="@+id/organisation_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="Calderdale Council"
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:paddingTop="4dp"
+        android:paddingBottom="6dp"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"/>
+
+</LinearLayout>

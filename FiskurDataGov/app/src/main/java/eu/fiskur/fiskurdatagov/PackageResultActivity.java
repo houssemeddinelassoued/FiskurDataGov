@@ -6,7 +6,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.IntentSender;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Environment;
@@ -16,29 +15,19 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.drive.Drive;
-import com.google.android.gms.drive.DriveApi;
-import com.google.android.gms.drive.DriveContents;
-import com.google.android.gms.drive.DriveFolder;
-import com.google.android.gms.drive.DriveId;
-import com.google.android.gms.drive.Metadata;
-import com.google.android.gms.drive.MetadataChangeSet;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 
 import butterknife.ButterKnife;
 import butterknife.InjectView;
 import eu.fiskur.fiskurdatagov.objects.Organization;
 import eu.fiskur.fiskurdatagov.objects.PackageSearchResultObject;
 import eu.fiskur.fiskurdatagov.objects.PackageSearchResultObjectResource;
-import eu.fiskur.fiskurdatagov.providers.GoogleApiProvider;
 import timber.log.Timber;
 
 
@@ -48,7 +37,6 @@ public class PackageResultActivity extends ActionBarActivity {
     @InjectView(R.id.results_list_view) ListView resultsListView;
     PackageSearchResultObject resultObj;
     ResourceAdapter resourceAdapter;
-    DriveId driveId;
     private long downloadId;
 
     @Override
@@ -63,7 +51,6 @@ public class PackageResultActivity extends ActionBarActivity {
             Timber.d("Has object in extras");
             resultObj = (PackageSearchResultObject) getIntent().getExtras().get("searchresultobj");
             buildScreen();
-            initProjectDriveId();
         }else{
             Timber.e("No extras object");
         }
@@ -90,7 +77,18 @@ public class PackageResultActivity extends ActionBarActivity {
 
         subtitleView.setText(label);
 
-        resourceAdapter = new ResourceAdapter(this, resultObj.getResources());
+        int numResource = resultObj.getResourceCount();
+        if(numResource > 0){
+            resourceAdapter = new ResourceAdapter(this, resultObj.getResources());
+        }else{
+            //TODO - this is messy
+            PackageSearchResultObjectResource dummy = new PackageSearchResultObjectResource();
+            dummy.setName("No resources found");
+            ArrayList<PackageSearchResultObjectResource> dummyArr = new ArrayList<PackageSearchResultObjectResource>();
+            dummyArr.add(dummy);
+            resourceAdapter = new ResourceAdapter(this, dummyArr);
+        }
+
         resultsListView.setAdapter(resourceAdapter);
 
         resultsListView.addHeaderView(listHeader);
@@ -99,28 +97,43 @@ public class PackageResultActivity extends ActionBarActivity {
         resultsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if(position == 0){
-                    return;
-                }
-                PackageSearchResultObjectResource resource = (PackageSearchResultObjectResource)resourceAdapter.getItem(position - 1);
-                String url = resource.getUrl();
-                Timber.d("url: " + url);
+            if(position == 0){
+                return;
+            }
+            PackageSearchResultObjectResource resource = (PackageSearchResultObjectResource)resourceAdapter.getItem(position - 1);
+            String url = resource.getUrl();
+            if(url == null || url.isEmpty()){
+                Timber.d("No Url in object");
+                return;
+            }
+            Timber.d("url: " + url);
 
-                if(url.toLowerCase().endsWith(".xls") || url.toLowerCase().endsWith("pdf")){
-                    if(GoogleApiProvider.client.isConnected()){
-                        Timber.d("Downloading file");
-                        downloadFile(resource);
-                    }else{
-                        Timber.d("Google Drive not connected, using browser to handle file");
-                        launchBrowser(url);
-                    }
-                    return;
-                }else{
-                    launchBrowser(url);
-                }
-
+            if(isFile(url)){
+                downloadFile(resource);
+            }else{
+                launchBrowser(url);
+            }
             }
         });
+    }
+
+    private boolean isFile(String url){
+        String u = url.toLowerCase();
+        boolean isFile = false;
+        if(u.endsWith(".xls")
+                || u.endsWith(".xlsx")
+                || u.endsWith(".pdf")
+                || u.endsWith(".doc")
+                || u.endsWith(".docx")
+                || u.endsWith(".zip")
+                || u.endsWith(".txt")
+                || u.endsWith(".ppt")
+                || u.endsWith(".pptx")
+                || u.endsWith(".csv")){
+            isFile = true;
+        }
+
+        return isFile;
     }
 
     private void launchBrowser(String url){
@@ -150,64 +163,22 @@ public class PackageResultActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void initProjectDriveId(){
-        DriveFolder rootFolder = Drive.DriveApi.getRootFolder(GoogleApiProvider.client);
-        rootFolder.listChildren(GoogleApiProvider.client).setResultCallback(new ResultCallback<DriveApi.MetadataBufferResult>() {
-            @Override
-            public void onResult(DriveApi.MetadataBufferResult result) {
-                if(result.getStatus().isSuccess()){
-                    //ODO - replace this with a query...
-                    for (Metadata md : result.getMetadataBuffer()) {
-                        if(md.isFolder() && md.getTitle().equals(FOLDER)){
-                            driveId = md.getDriveId();
-                            l("Folder already exists: " + driveId);
-                        }
-                    }
-                    if(driveId == null){
-                        l("Creating folder...");
-                        createProjectFolder();
-                    }
-                }
-            }
-        });
+    @Override
+    protected void onStart() {
+        super.onStart();
+        registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
     }
 
-    private void createProjectFolder(){
-        DriveFolder rootFolder = Drive.DriveApi.getRootFolder(GoogleApiProvider.client);
-        MetadataChangeSet changeSet = new MetadataChangeSet.Builder().setTitle(FOLDER).build();
-        rootFolder.createFolder(GoogleApiProvider.client, changeSet).setResultCallback(new ResultCallback<DriveFolder.DriveFolderResult>() {
-            @Override
-            public void onResult(DriveFolder.DriveFolderResult driveFolderResult) {
-                if (!driveFolderResult.getStatus().isSuccess()) {
-                    l("Error while trying to create folder");
-                    return;
-                }
-                driveId = driveFolderResult.getDriveFolder().getDriveId();
-                l("Created the folder: " + driveId);
-            }
-        });
-    }
-
-    private void saveFile(){
-        //https://github.com/googledrive/android-demos/blob/master/src/com/google/android/gms/drive/sample/demo/CreateFileActivity.java
-        Drive.DriveApi.newDriveContents(GoogleApiProvider.client).setResultCallback(new ResultCallback<DriveApi.DriveContentsResult>() {
-            @Override
-            public void onResult(DriveApi.DriveContentsResult driveContentsResult) {
-                if (!driveContentsResult.getStatus().isSuccess()) {
-                    Timber.e("Error while trying to create new file contents");
-                    return;
-                }
-                final DriveContents driveContents = driveContentsResult.getDriveContents();
-
-            }
-        });
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(onDownloadComplete);
     }
 
     private void downloadFile(PackageSearchResultObjectResource resource){
-        registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+
         String url = resource.getUrl();
         DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-        request.setDescription("Downloaded using Fiskur Data.Gov app");
         request.setTitle(resource.getTitle());
         request.allowScanningByMediaScanner();
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
@@ -219,33 +190,81 @@ public class PackageResultActivity extends ActionBarActivity {
 
     BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
         public void onReceive(Context ctxt, Intent intent) {
-            Timber.d("onDownloadComplete BroadcastReceiver...");
+        Long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0);
 
-            Long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0);
+        if(downloadId == id){
+            DownloadManager.Query query = new DownloadManager.Query();
+            query.setFilterById(downloadId);
+            DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            Cursor cur = manager.query(query);
 
-            if(downloadId == id){
-                Timber.d("Gov.uk file is ready...");
-                DownloadManager.Query query = new DownloadManager.Query();
-                query.setFilterById(downloadId);
-                DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-                Cursor cur = manager.query(query);
+            if (cur.moveToFirst()) {
+                int columnIndex = cur.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                if (DownloadManager.STATUS_SUCCESSFUL == cur.getInt(columnIndex)) {
+                    String uriString = cur.getString(cur.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI));
 
-                if (cur.moveToFirst()) {
-                    int columnIndex = cur.getColumnIndex(DownloadManager.COLUMN_STATUS);
-                    if (DownloadManager.STATUS_SUCCESSFUL == cur.getInt(columnIndex)) {
-                        String uriString = cur.getString(cur.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI));
-
-                        File mFile = new File(Uri.parse(uriString).getPath());
-                        if(mFile.exists()){
-                            Timber.d("File Exists!");
+                    File mFile = new File(Uri.parse(uriString).getPath());
+                    if(mFile.exists()){
+                        try {
+                            openFile(mFile, mFile.getName());
+                        } catch(ActivityNotFoundException e){
+                            Timber.e(e.toString());
+                        } catch (IOException e) {
+                            Timber.e(e.toString());
                         }
-
-                    } else {
-                        Timber.e("File did not download successfully");
                     }
+                } else {
+                    //Timber.e("File did not download successfully");
                 }
             }
         }
+        }
     };
 
+    private void openFile(File file, String url) throws IOException, ActivityNotFoundException {
+
+        Uri uri = Uri.fromFile(file);
+
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+
+        if (url.toString().contains(".doc") || url.toString().contains(".docx")) {
+            // Word document
+            intent.setDataAndType(uri, "application/msword");
+        } else if(url.toString().contains(".pdf")) {
+            // PDF file
+            intent.setDataAndType(uri, "application/pdf");
+        } else if(url.toString().contains(".ppt") || url.toString().contains(".pptx")) {
+            // Powerpoint file
+            intent.setDataAndType(uri, "application/vnd.ms-powerpoint");
+        } else if(url.toString().contains(".xls") || url.toString().contains(".xlsx")) {
+            // Excel file
+            intent.setDataAndType(uri, "application/vnd.ms-excel");
+        } else if(url.toString().contains(".zip") || url.toString().contains(".rar")) {
+            // WAV audio file
+            intent.setDataAndType(uri, "application/x-wav");
+        } else if(url.toString().contains(".rtf")) {
+            // RTF file
+            intent.setDataAndType(uri, "application/rtf");
+        } else if(url.toString().contains(".wav") || url.toString().contains(".mp3")) {
+            // WAV audio file
+            intent.setDataAndType(uri, "audio/x-wav");
+        } else if(url.toString().contains(".gif")) {
+            // GIF file
+            intent.setDataAndType(uri, "image/gif");
+        } else if(url.toString().contains(".jpg") || url.toString().contains(".jpeg") || url.toString().contains(".png")) {
+            // JPG file
+            intent.setDataAndType(uri, "image/jpeg");
+        } else if(url.toString().contains(".txt")) {
+            // Text file
+            intent.setDataAndType(uri, "text/plain");
+        } else if(url.toString().contains(".3gp") || url.toString().contains(".mpg") || url.toString().contains(".mpeg") || url.toString().contains(".mpe") || url.toString().contains(".mp4") || url.toString().contains(".avi")) {
+            // Video files
+            intent.setDataAndType(uri, "video/*");
+        } else {
+            intent.setDataAndType(uri, "*/*");
+        }
+
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+    }
 }

@@ -2,7 +2,6 @@ package eu.fiskur.fiskurdatagov;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentSender;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -18,10 +17,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.drive.Drive;
+import com.afollestad.materialdialogs.MaterialDialog;
 import com.squareup.otto.Bus;
 import com.squareup.otto.Subscribe;
 
@@ -36,7 +32,6 @@ import eu.fiskur.fiskurdatagov.events.TagsLoadedEvent;
 import eu.fiskur.fiskurdatagov.objects.*;
 import eu.fiskur.fiskurdatagov.objects.Package;
 import eu.fiskur.fiskurdatagov.providers.BusProvider;
-import eu.fiskur.fiskurdatagov.providers.GoogleApiProvider;
 import timber.log.Timber;
 
 
@@ -45,8 +40,7 @@ public class MainActivity extends ActionBarActivity {
     static final int RESOLVE_CONNECTION_REQUEST_CODE = 9876;
     Bus bus = BusProvider.getInstance();
     ArrayAdapter<String> tagsAdapter = null;
-    ArrayAdapter<Package> packagesAdapter;
-    ArrayAdapter<PackageSearchResultObject> packagesSearchAdapter;
+    PackageAdapter packagesAdapter;
     @InjectView(R.id.search_label_text_view) TextView searchLabelTextView;
     @InjectView(R.id.autocomplete_text_view) AutoCompleteTextView autoCompleteTextView;
     @InjectView(R.id.search_button) Button searchButton;
@@ -59,6 +53,8 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.inject(this);
+
+        getSupportActionBar().setTitle(R.string.full_app_name);
 
         imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 
@@ -82,14 +78,13 @@ public class MainActivity extends ActionBarActivity {
         packagesListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                PackageSearchResultObject resultObj = packagesSearchAdapter.getItem(position);
+                PackageSearchResultObject resultObj = (PackageSearchResultObject) packagesAdapter.getItem(position);
                 Intent intent = new Intent(MainActivity.this, PackageResultActivity.class);
                 intent.putExtra("searchresultobj", resultObj);
                 startActivity(intent);
             }
         });
 
-        buildDrive();
     }
 
     private void l(String message){
@@ -97,64 +92,6 @@ public class MainActivity extends ActionBarActivity {
     }
 
 
-    private void buildDrive(){
-        l("Creating GoogleDrive client");
-        GoogleApiProvider.client = new GoogleApiClient.Builder(this)
-        .addApi(Drive.API)
-        .addScope(Drive.SCOPE_FILE)
-        .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
-            @Override
-            public void onConnected(Bundle bundle) {
-                l("GoogleApiClient onConnected()");
-            }
-
-            @Override
-            public void onConnectionSuspended(int i) {
-                l("GoogleApiClient onConnectionSuspended()");
-            }
-        })
-        .addOnConnectionFailedListener(new GoogleApiClient.OnConnectionFailedListener() {
-            @Override
-            public void onConnectionFailed(ConnectionResult connectionResult) {
-                l("GoogleApiClient onConnectionFailed()");
-                if (connectionResult.hasResolution()) {
-                    try {
-                        connectionResult.startResolutionForResult(MainActivity.this, RESOLVE_CONNECTION_REQUEST_CODE);
-                    } catch (IntentSender.SendIntentException e) {
-                        Timber.e(e.toString());
-                    }
-                } else {
-                    Timber.e(connectionResult.toString());
-                    GooglePlayServicesUtil.getErrorDialog(connectionResult.getErrorCode(), MainActivity.this, 0).show();
-                }
-            }
-        })
-        .build();
-    }
-
-    boolean connectAttempted = false;
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-
-        l("Attempting to connect to GoogleDrive");
-        if(!connectAttempted) {
-            connectAttempted = true;
-            GoogleApiProvider.connect();
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        switch (requestCode) {
-            case RESOLVE_CONNECTION_REQUEST_CODE:
-                if (resultCode == RESULT_OK) {
-                    GoogleApiProvider.connect();
-                }
-                break;
-        }
-    }
 
     private void doSearch(String query){
         progressBar.setVisibility(View.VISIBLE);
@@ -182,7 +119,7 @@ public class MainActivity extends ActionBarActivity {
 
     @Subscribe
     public void onTagsLoaded(TagsLoadedEvent tagsLoadedEvent){
-        searchLabelTextView.setText("Search by tag (" + tagsLoadedEvent.getResponse().getResult().size() + " tags) or keyword");
+        //searchLabelTextView.setText("Search by tag (" + tagsLoadedEvent.getResponse().getResult().size() + " tags) or keyword");
         tagsAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, tagsLoadedEvent.getResponse().getResult());
         autoCompleteTextView.setAdapter(tagsAdapter);
         autoCompleteTextView.setActivated(true);
@@ -190,22 +127,12 @@ public class MainActivity extends ActionBarActivity {
     }
 
     @Subscribe
-    public void onTagPackagesLoaded(TagPackagesLoadedEvent tagPackagesLoadedEvent){
-        Timber.d(tagPackagesLoadedEvent.getResponse().getResult().toString());
-        progressBar.setVisibility(View.GONE);
-
-        packagesAdapter = new ArrayAdapter<Package>(MainActivity.this, android.R.layout.simple_list_item_1, android.R.id.text1, tagPackagesLoadedEvent.getResponse().getResult().getPackages());
-        packagesListView.setAdapter(packagesAdapter);
-        packagesListView.setVisibility(View.VISIBLE);
-    }
-
-    @Subscribe
     public void onPackageSearchResults(PackageSearchResultsEvent packageSearchResultsEvent){
         Timber.d("Package Search returned...");
         progressBar.setVisibility(View.GONE);
 
-        packagesSearchAdapter = new ArrayAdapter<PackageSearchResultObject>(MainActivity.this, android.R.layout.simple_list_item_1, android.R.id.text1, packageSearchResultsEvent.getResponse().getResult().getResults());
-        packagesListView.setAdapter(packagesSearchAdapter);
+        packagesAdapter = new PackageAdapter(MainActivity.this, packageSearchResultsEvent.getResponse().getResult().getResults());
+        packagesListView.setAdapter(packagesAdapter);
         packagesListView.setVisibility(View.VISIBLE);
 
     }
@@ -226,7 +153,12 @@ public class MainActivity extends ActionBarActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_about) {
+            new MaterialDialog.Builder(MainActivity.this)
+                    .title(R.string.app_name)
+                    .content(R.string.about)
+                    .positiveText("Ok")
+                    .show();
             return true;
         }
 
